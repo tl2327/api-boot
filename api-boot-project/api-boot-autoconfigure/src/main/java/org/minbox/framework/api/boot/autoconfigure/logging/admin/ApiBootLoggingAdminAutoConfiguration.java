@@ -18,19 +18,24 @@
 package org.minbox.framework.api.boot.autoconfigure.logging.admin;
 
 import org.minbox.framework.api.boot.autoconfigure.logging.admin.ui.ApiBootLoggingAdminUiAutoConfiguration;
-import org.minbox.framework.api.boot.plugin.logging.admin.endpoint.LoggingEndpoint;
-import org.minbox.framework.api.boot.plugin.logging.admin.endpoint.LoggingRequestMappingHandlerMapping;
-import org.minbox.framework.api.boot.plugin.logging.admin.listener.ReportLogJsonFormatListener;
+import org.minbox.framework.logging.admin.LoggingAdminFactoryBean;
+import org.minbox.framework.logging.admin.storage.LoggingDataSourceStorage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.BeanCreationException;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.scheduling.annotation.EnableAsync;
+
+import javax.sql.DataSource;
 
 /**
  * ApiBoot Logging Admin Configuration
@@ -44,14 +49,21 @@ import org.springframework.web.servlet.HandlerMapping;
  * GitHub：https://github.com/hengboy
  */
 @Configuration
-@ConditionalOnClass(LoggingEndpoint.class)
-@ConditionalOnWebApplication
+@ConditionalOnClass(LoggingAdminFactoryBean.class)
+@ConditionalOnBean(DataSource.class)
 @EnableConfigurationProperties(ApiBootLoggingAdminProperties.class)
 @AutoConfigureAfter(DataSourceAutoConfiguration.class)
-@Import({ApiBootLoggingAdminUiAutoConfiguration.class, ApiBootLoggingStorageAutoConfiguration.class})
+@Import({
+    ApiBootLoggingAdminUiAutoConfiguration.class
+})
+@EnableAsync
 public class ApiBootLoggingAdminAutoConfiguration {
     /**
-     * ApiBoot Logging Admin Properties
+     * logger instance
+     */
+    static Logger logger = LoggerFactory.getLogger(ApiBootLoggingAdminAutoConfiguration.class);
+    /**
+     * {@link ApiBootLoggingAdminProperties}
      */
     private ApiBootLoggingAdminProperties apiBootLoggingAdminProperties;
 
@@ -60,37 +72,45 @@ public class ApiBootLoggingAdminAutoConfiguration {
     }
 
     /**
-     * ApiBoot Logging Endpoint
-     * Receive Log report
-     *
-     * @return LoggingEndpoint
+     * {@link org.minbox.framework.logging.admin.storage.LoggingStorage} database
+     * @param dataSource {@link DataSource}
+     * @return {@link LoggingDataSourceStorage}
      */
     @Bean
     @ConditionalOnMissingBean
-    public LoggingEndpoint loggingEndpoint() {
-        return new LoggingEndpoint();
+    public LoggingDataSourceStorage loggingDataSourceStorage(DataSource dataSource) {
+        LoggingDataSourceStorage storage = new LoggingDataSourceStorage(dataSource);
+        return storage;
     }
 
     /**
-     * ApiBoot Logging Request Mapping
+     * instantiation {@link LoggingAdminFactoryBean}
      *
-     * @return HandlerMapping
-     */
-    @Bean
-    public HandlerMapping loggingRequestMappingHandlerMapping() {
-        LoggingRequestMappingHandlerMapping mapping = new LoggingRequestMappingHandlerMapping();
-        mapping.setOrder(0);
-        return mapping;
-    }
-
-    /**
-     * Report Log Json Format Listener
-     *
-     * @return ReportLogJsonFormatListener
+     * @param loggingDataSourceStorage {@link LoggingDataSourceStorage}
+     * @return LoggingAdminFactoryBean
      */
     @Bean
     @ConditionalOnMissingBean
-    public ReportLogJsonFormatListener reportLogJsonFormatListener() {
-        return new ReportLogJsonFormatListener(apiBootLoggingAdminProperties.isShowConsoleReportLog(), apiBootLoggingAdminProperties.isFormatConsoleLogJson());
+    public LoggingAdminFactoryBean loggingAdminFactoryBean(LoggingDataSourceStorage loggingDataSourceStorage) {
+        LoggingAdminFactoryBean factoryBean = new LoggingAdminFactoryBean();
+        factoryBean.setLoggingStorage(loggingDataSourceStorage);
+        factoryBean.setShowConsoleReportLog(apiBootLoggingAdminProperties.isShowConsoleReportLog());
+        factoryBean.setFormatConsoleLogJson(apiBootLoggingAdminProperties.isFormatConsoleLogJson());
+        logger.info("【LoggingAdminFactoryBean】init successfully.");
+        return factoryBean;
+    }
+
+    /**
+     * Verify that the {@link DataSource} exists and perform an exception alert when it does not exist
+     *
+     * @see org.minbox.framework.api.boot.autoconfigure.enhance.ApiBootMyBatisEnhanceAutoConfiguration
+     */
+    @Configuration
+    @ConditionalOnMissingBean(DataSource.class)
+    public static class DataSourceNotFoundConfiguration implements InitializingBean {
+        @Override
+        public void afterPropertiesSet() throws Exception {
+            throw new BeanCreationException("No " + DataSource.class.getName() + " Found.");
+        }
     }
 }

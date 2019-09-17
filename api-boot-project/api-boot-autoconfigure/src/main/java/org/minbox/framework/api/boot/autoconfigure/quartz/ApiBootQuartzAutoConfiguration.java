@@ -136,7 +136,8 @@ public class ApiBootQuartzAutoConfiguration {
         /**
          * properties needed to initialize Jdbc mode
          *
-         * @return
+         * @param properties ApiBoot Quartz Properties
+         * @return SchedulerFactoryBeanCustomizer
          */
         @Bean
         @Order(0)

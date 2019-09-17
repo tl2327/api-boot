@@ -17,7 +17,8 @@
 
 package org.minbox.framework.api.boot.autoconfigure.logging;
 
-import org.minbox.framework.api.boot.plugin.logging.admin.discovery.support.LoggingRegistryCenterAdminDiscovery;
+import org.minbox.framework.logging.client.admin.discovery.LoggingAdminDiscovery;
+import org.minbox.framework.logging.client.admin.discovery.support.LoggingRegistryCenterAdminDiscovery;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -25,6 +26,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.ObjectUtils;
 
 import static org.minbox.framework.api.boot.autoconfigure.logging.ApiBootLoggingProperties.API_BOOT_LOGGING_PREFIX;
 
@@ -55,12 +57,25 @@ public class ApiBootLoggingAdminDiscoveryAutoConfiguration {
 
     /**
      * ApiBoot Logging Admin Registry Center Discovery
+     * setting basic auth username if not empty {@link LoggingRegistryCenterAdminDiscovery#setUsername(String)}
+     * setting basic auth password if not empty {@link LoggingRegistryCenterAdminDiscovery#setPassword(String)}
      *
+     * @param loadBalancerClient LoadBalance Client
      * @return LoggingRegistryCenterAdminDiscovery
      */
     @Bean
     @ConditionalOnMissingBean
-    public LoggingRegistryCenterAdminDiscovery loggingRegistryCenterAdminDiscovery(LoadBalancerClient loadBalancerClient) {
-        return new LoggingRegistryCenterAdminDiscovery(apiBootLoggingProperties.getDiscovery().getServiceId(), apiBootLoggingProperties.getDiscovery().getUsername(), apiBootLoggingProperties.getDiscovery().getPassword(), loadBalancerClient);
+    public LoggingAdminDiscovery loggingRegistryCenterAdminDiscovery(LoadBalancerClient loadBalancerClient) {
+        LoggingRegistryCenterAdminDiscovery registryCenterAdminDiscovery =
+            new LoggingRegistryCenterAdminDiscovery(apiBootLoggingProperties.getDiscovery().getServiceId(), loadBalancerClient);
+        String basicAuthUserName = apiBootLoggingProperties.getDiscovery().getUsername();
+        if (!ObjectUtils.isEmpty(basicAuthUserName)) {
+            registryCenterAdminDiscovery.setUsername(basicAuthUserName);
+        }
+        String basicAuthPassword = apiBootLoggingProperties.getDiscovery().getPassword();
+        if (!ObjectUtils.isEmpty(basicAuthPassword)) {
+            registryCenterAdminDiscovery.setPassword(basicAuthPassword);
+        }
+        return registryCenterAdminDiscovery;
     }
 }

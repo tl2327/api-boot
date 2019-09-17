@@ -17,12 +17,21 @@
 
 package org.minbox.framework.api.boot.autoconfigure.logging.admin.ui;
 
-import org.minbox.framework.api.boot.plugin.logging.admin.ui.HomepageForwardingFilter;
-import org.minbox.framework.api.boot.plugin.logging.admin.ui.LoggingAdminUiEndpoint;
+import org.minbox.framework.api.boot.autoconfigure.logging.admin.ApiBootLoggingAdminAutoConfiguration;
+import org.minbox.framework.logging.admin.LoggingAdminFactoryBean;
+import org.minbox.framework.logging.admin.ui.HomepageForwardingFilter;
+import org.minbox.framework.logging.admin.ui.LoggingAdminUiEndpoint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -48,9 +57,16 @@ import static java.util.Arrays.asList;
  * GitHub：https://github.com/hengboy
  */
 @Configuration
+@ConditionalOnClass(LoggingAdminUiEndpoint.class)
 @EnableConfigurationProperties(ApiBootLoggingAdminUiProperties.class)
+@AutoConfigureAfter(ApiBootLoggingAdminAutoConfiguration.class)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-public class ApiBootLoggingAdminUiAutoConfiguration implements WebMvcConfigurer {
+public class ApiBootLoggingAdminUiAutoConfiguration
+    implements WebMvcConfigurer, InitializingBean, ApplicationContextAware {
+    /**
+     * logger instance
+     */
+    static Logger logger = LoggerFactory.getLogger(ApiBootLoggingAdminUiAutoConfiguration.class);
     /**
      * ApiBoot Logging Admin Ui Resource Handler Prefix
      */
@@ -63,10 +79,10 @@ public class ApiBootLoggingAdminUiAutoConfiguration implements WebMvcConfigurer 
      * Default Ui Router List
      */
     private static final List<String> DEFAULT_UI_ROUTES = asList(
-            "/about/**",
-            "/applications/**",
-            "/journal/**",
-            "/wallboard/**"
+        "/about/**",
+        "/services/**",
+        "/logs/**",
+        "/wallboard/**"
     );
     /**
      * Application Context
@@ -76,10 +92,15 @@ public class ApiBootLoggingAdminUiAutoConfiguration implements WebMvcConfigurer 
      * ApiBoot Logging Admin Ui Properties
      */
     private ApiBootLoggingAdminUiProperties adminUiProperties;
+    /**
+     * LoggingAdmin FactoryBean {@link LoggingAdminFactoryBean}
+     */
+    private LoggingAdminFactoryBean loggingAdminFactoryBean;
 
-    public ApiBootLoggingAdminUiAutoConfiguration(ApplicationContext applicationContext, ApiBootLoggingAdminUiProperties adminUiProperties) {
-        this.applicationContext = applicationContext;
+    public ApiBootLoggingAdminUiAutoConfiguration(ApiBootLoggingAdminUiProperties adminUiProperties,
+                                                  LoggingAdminFactoryBean loggingAdminFactoryBean) {
         this.adminUiProperties = adminUiProperties;
+        this.loggingAdminFactoryBean = loggingAdminFactoryBean;
     }
 
     /**
@@ -125,20 +146,25 @@ public class ApiBootLoggingAdminUiAutoConfiguration implements WebMvcConfigurer 
     }
 
     /**
-     * Logging Admin Ui Endpoint
-     * The ability to provide logging admin data to the public
+     * setting admin ui configs
+     * application brand {@link LoggingAdminFactoryBean.AdminUiSetting#getBrand()}
+     * application title {@link LoggingAdminFactoryBean.AdminUiSetting#getTitle()}
+     * page routes {@link LoggingAdminFactoryBean.AdminUiSetting#getRoutes()}
      *
-     * @return LoggingAdminUiEndpoint
+     * @throws Exception
+     * @see org.minbox.framework.logging.admin.LoggingAdminFactoryBean.AdminUiSetting
      */
-    @Bean
-    @ConditionalOnMissingBean
-    public LoggingAdminUiEndpoint loggingAdminUiEndpoint() {
-        return new LoggingAdminUiEndpoint(
-                LoggingAdminUiEndpoint.Settings.builder()
-                        .brand(adminUiProperties.getBrand())
-                        .title(adminUiProperties.getTitle())
-                        .routes(DEFAULT_UI_ROUTES)
-                        .build()
-        );
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        loggingAdminFactoryBean.getAdminUiSetting().setBrand(adminUiProperties.getBrand());
+        loggingAdminFactoryBean.getAdminUiSetting().setTitle(adminUiProperties.getTitle());
+        loggingAdminFactoryBean.getAdminUiSetting().setRoutes(DEFAULT_UI_ROUTES);
+        logger.info("LoggingAdmin UiSetting set successfully.");
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+        logger.debug("ApplicationContext set successfully.");
     }
 }

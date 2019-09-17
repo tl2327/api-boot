@@ -17,8 +17,12 @@
 
 package org.minbox.framework.api.boot.autoconfigure.logging;
 
-import org.minbox.framework.api.boot.plugin.logging.admin.discovery.support.LoggingAppointAdminDiscovery;
-import org.minbox.framework.api.boot.plugin.logging.admin.discovery.support.LoggingRegistryCenterAdminDiscovery;
+import org.minbox.framework.logging.client.admin.discovery.LoggingAdminDiscovery;
+import org.minbox.framework.logging.client.admin.discovery.lb.LoadBalanceStrategy;
+import org.minbox.framework.logging.client.admin.discovery.lb.support.RandomWeightedStrategy;
+import org.minbox.framework.logging.client.admin.discovery.lb.support.SmoothWeightedRoundRobinStrategy;
+import org.minbox.framework.logging.client.admin.discovery.support.LoggingAppointAdminDiscovery;
+import org.minbox.framework.logging.client.admin.discovery.support.LoggingRegistryCenterAdminDiscovery;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -60,8 +64,32 @@ public class ApiBootLoggingAdminAppointAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public LoggingAppointAdminDiscovery loggingConfigAdminDiscovery() {
+    public LoggingAdminDiscovery loggingConfigAdminDiscovery() {
         String[] serverAddressArray = apiBootLoggingProperties.getAdmin().getServerAddress().split(",");
-        return new LoggingAppointAdminDiscovery(serverAddressArray);
+        LoggingAppointAdminDiscovery appointAdminDiscovery = new LoggingAppointAdminDiscovery(serverAddressArray);
+        LoadBalanceStrategy loadBalanceStrategy = instantiationLoadBalanceStrategy();
+        appointAdminDiscovery.setLoadBalanceStrategy(loadBalanceStrategy);
+        return appointAdminDiscovery;
+    }
+
+    /**
+     * Create {@link LoadBalanceStrategy} by {@link LoadBalanceStrategyAway}
+     * default is use {@link RandomWeightedStrategy}
+     *
+     * @return {@link LoadBalanceStrategy} support class instance
+     */
+    private LoadBalanceStrategy instantiationLoadBalanceStrategy() {
+        LoadBalanceStrategyAway strategyAway = apiBootLoggingProperties.getLoadBalanceStrategy();
+        LoadBalanceStrategy strategy;
+        switch (strategyAway) {
+            case POLL_WEIGHT:
+                strategy = new SmoothWeightedRoundRobinStrategy();
+                break;
+            case RANDOM_WEIGHT:
+            default:
+                strategy = new RandomWeightedStrategy();
+                break;
+        }
+        return strategy;
     }
 }

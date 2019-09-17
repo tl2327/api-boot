@@ -3,6 +3,9 @@
 </p>
 <p align="center">
     <img src="https://www.travis-ci.org/hengboy/api-boot.svg?branch=master" alt="build">
+    <a href="https://gitter.im/api-boot/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge">
+        <img src="https://badges.gitter.im/api-boot/community.svg" alt="Gitter"/>
+    </a>
     <a href="http://apiboot.yuqiyu.com">
         <img src="https://img.shields.io/badge/link-查看ApiBoot官方文档-blue.svg?style=flat-square" alt="ApiBoot官网">
     </a>
@@ -81,7 +84,7 @@ ApiBoot 官网：http://apiboot.minbox.io
     <dependency>
       <groupId>org.minbox.framework</groupId>
       <artifactId>api-boot-dependencies</artifactId>
-      <version>2.1.3-SNAPSHOT</version>
+      <version>2.1.4-SNAPSHOT</version>
       <type>pom</type>
       <scope>import</scope>
     </dependency>

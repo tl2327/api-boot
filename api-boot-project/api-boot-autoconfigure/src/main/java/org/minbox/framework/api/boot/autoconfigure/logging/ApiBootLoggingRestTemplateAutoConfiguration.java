@@ -17,38 +17,39 @@
 
 package org.minbox.framework.api.boot.autoconfigure.logging;
 
-import org.minbox.framework.api.boot.plugin.logging.http.rest.ApiBootLoggingRestTemplateInterceptor;
+import org.minbox.framework.logging.client.http.rest.LoggingRestTemplateInterceptor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.util.ObjectUtils;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
- * ApiBoot Logging RestTemplate Configuration
+ * ApiBoot Logging ResTemplate Config
+ * {@link RestTemplate}
+ * Setting Interceptor Transmit Link Information
  *
- * @author：恒宇少年 - 于起宇
- * <p>
- * DateTime：2019-07-26 17:46
- * Blog：http://blog.yuqiyu.com
- * WebSite：http://www.jianshu.com/u/092df3f77bca
- * Gitee：https://gitee.com/hengboy
- * GitHub：https://github.com/hengboy
+ * @author 恒宇少年
  */
 @Configuration
 @ConditionalOnClass(RestTemplate.class)
+@ConditionalOnBean(RestTemplate.class)
 public class ApiBootLoggingRestTemplateAutoConfiguration {
 
+    public ApiBootLoggingRestTemplateAutoConfiguration(RestTemplate restTemplate) {
 
-    /**
-     * ApiBoot Logging RestTemplate Interceptor
-     *
-     * @return ClientHttpRequestInterceptor
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public ClientHttpRequestInterceptor apiBootLoggingRestTemplateInterceptor() {
-        return new ApiBootLoggingRestTemplateInterceptor();
+        List<ClientHttpRequestInterceptor> interceptors = restTemplate.getInterceptors();
+
+        LoggingRestTemplateInterceptor interceptor = new LoggingRestTemplateInterceptor();
+
+        if (ObjectUtils.isEmpty(interceptors)) {
+            restTemplate.setInterceptors(Arrays.asList(interceptor));
+        } else {
+            interceptors.add(interceptor);
+        }
     }
 }

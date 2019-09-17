@@ -18,8 +18,7 @@
 package org.minbox.framework.api.boot.autoconfigure.logging;
 
 import lombok.Data;
-import lombok.Getter;
-import org.minbox.framework.api.boot.plugin.logging.ReportAway;
+import org.minbox.framework.logging.core.ReportAway;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -57,6 +56,10 @@ public class ApiBootLoggingProperties {
      */
     private boolean formatConsoleLogJson = false;
     /**
+     * show console log
+     */
+    private boolean showConsoleLog = false;
+    /**
      * Report Request Log To Admin Away
      */
     private ReportAway reportAway = ReportAway.just;
@@ -85,6 +88,14 @@ public class ApiBootLoggingProperties {
      * support eureka
      */
     private DiscoveryInstance discovery;
+    /**
+     * Choose load balancing strategy for admin report log
+     * {@link org.minbox.framework.logging.client.admin.discovery.lb.LoadBalanceStrategy}
+     *
+     * @see org.minbox.framework.logging.client.admin.discovery.lb.support.RandomWeightedStrategy
+     * @see org.minbox.framework.logging.client.admin.discovery.lb.support.SmoothWeightedRoundRobinStrategy
+     */
+    private LoadBalanceStrategyAway loadBalanceStrategy = LoadBalanceStrategyAway.RANDOM_WEIGHT;
 
     /**
      * Config ApiBoot Logging Admin Server
